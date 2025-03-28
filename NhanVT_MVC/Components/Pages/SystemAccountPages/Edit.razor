@@ -121,26 +121,26 @@ else
         {
             // Check authorization
             var httpContext = HttpContextAccessor.HttpContext;
-            if (httpContext != null)
-            {
-                var email = httpContext.Session.GetString("Email");
-                var roleId = httpContext.Session.GetInt32("RoleId");
-                var isAdmin = httpContext.Session.GetString("IsAdmin");
+            // if (httpContext != null)
+            // {
+            //     var email = httpContext.Session.GetString("Email");
+            //     var roleId = httpContext.Session.GetInt32("RoleId");
+            //     var isAdmin = httpContext.Session.GetString("IsAdmin");
                 
-                if (string.IsNullOrEmpty(email))
-                {
-                    NavigationManager.NavigateTo("/login");
-                    return;
-                }
+            //     if (string.IsNullOrEmpty(email))
+            //     {
+            //         NavigationManager.NavigateTo("/login");
+            //         return;
+            //     }
                 
-                // Check authorization - only admin or role 1 can access
-                if ((roleId != 1) && (isAdmin != "true"))
-                {
-                    isUnauthorized = true;
-                    isLoading = false;
-                    return;
-                }
-            }
+            //     Check authorization - only admin or role 1 can access
+            //     if ((roleId != 1) && (isAdmin != "true"))
+            //     {
+            //         isUnauthorized = true;
+            //         isLoading = false;
+            //         return;
+            //     }
+            // }
             
             // Parse account ID from query parameter
             if (string.IsNullOrEmpty(accountIdString) || !short.TryParse(accountIdString, out short accountId))

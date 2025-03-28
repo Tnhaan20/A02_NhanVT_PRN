@@ -92,27 +92,27 @@ else
         try
         {
             // Check authorization
-            var httpContext = HttpContextAccessor.HttpContext;
-            if (httpContext != null)
-            {
-                var email = httpContext.Session.GetString("Email");
-                var roleId = httpContext.Session.GetInt32("RoleId");
-                var isAdmin = httpContext.Session.GetString("IsAdmin");
+            // var httpContext = HttpContextAccessor.HttpContext;
+            // if (httpContext != null)
+            // {
+            //     var email = httpContext.Session.GetString("Email");
+            //     var roleId = httpContext.Session.GetInt32("RoleId");
+            //     var isAdmin = httpContext.Session.GetString("IsAdmin");
 
-                if (string.IsNullOrEmpty(email))
-                {
-                    NavigationManager.NavigateTo("/login");
-                    return;
-                }
+            //     if (string.IsNullOrEmpty(email))
+            //     {
+            //         NavigationManager.NavigateTo("/login");
+            //         return;
+            //     }
 
-                // Check authorization - only admin or managers can access
-                if ((roleId != 1 && roleId != 2) && !(isAdmin == "true"))
-                {
-                    isUnauthorized = true;
-                    isLoading = false;
-                    return;
-                }
-            }
+            //     Check authorization - only admin or managers can access
+            //     if ((roleId != 1 && roleId != 2) && !(isAdmin == "true"))
+            //     {
+            //         isUnauthorized = true;
+            //         isLoading = false;
+            //         return;
+            //     }
+            // }
             
             // Parse the account ID from the query string
             if (string.IsNullOrEmpty(accountIdString) || !short.TryParse(accountIdString, out short accountId))
