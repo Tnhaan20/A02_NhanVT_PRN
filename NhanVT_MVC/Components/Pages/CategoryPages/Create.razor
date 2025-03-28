@@ -1,0 +1,169 @@
+﻿@page "/categories/create"
+@using A02_BOs
+@using A02_Repos
+@inject ICategoriesRepo CategoryRepository
+@inject NavigationManager NavigationManager
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Create Category</PageTitle>
+
+@if (isUnauthorized)
+{
+    <div class="alert alert-danger">
+        <h4>Unauthorized</h4>
+        <p>You do not have permission to access this page.</p>
+    </div>
+}
+else if (isLoading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container my-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0">Create Category</h2>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger mb-3">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        @errorMessage
+                    </div>
+                }
+                
+                <EditForm Model="category" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" />
+
+                    <div class="mb-3">
+                        <label for="categoryName" class="form-label">Category Name</label>
+                        <InputText id="categoryName" @bind-Value="category.CategoryName" class="form-control" />
+                        <ValidationMessage For="@(() => category.CategoryName)" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="categoryDescription" class="form-label">Category Description</label>
+                        <InputText id="categoryDescription" @bind-Value="category.CategoryDesciption" class="form-control" />
+                        <ValidationMessage For="@(() => category.CategoryDesciption)" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="parentCategory" class="form-label">Parent Category</label>
+                        <InputSelect id="parentCategory" @bind-Value="category.ParentCategoryId" class="form-select">
+                            <option value="">-- Select Parent Category --</option>
+                            @foreach (var parentCategory in parentCategories)
+                            {
+                                <option value="@parentCategory.CategoryId">@parentCategory.CategoryName</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input type="checkbox" id="isActive" class="form-check-input" 
+                               checked="@isActiveNonNullable" 
+                               @onchange="@(e => CategoryActiveChanged(e))" />
+                        <label class="form-check-label" for="isActive">
+                            <span id="statusText">@(isActiveNonNullable ? "Active" : "Inactive")</span>
+                        </label>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Create</button>
+                        <a href="/categories" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private Category category = new Category { IsActive = true };
+    private List<Category> parentCategories = new List<Category>();
+    private bool isLoading = true;
+    private bool isUnauthorized = false;
+    private string errorMessage = string.Empty;
+
+    // Property to handle the nullable bool conversion
+    private bool isActiveNonNullable
+    {
+        get => category.IsActive ?? true;
+        set => category.IsActive = value;
+    }
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            // Authentication check commented out for testing
+            /*
+            // Check if the user is authorized
+            var email = HttpContextAccessor.HttpContext?.Session.GetString("Email");
+            var roleId = HttpContextAccessor.HttpContext?.Session.GetInt32("RoleId");
+
+            if (string.IsNullOrEmpty(email) || roleId != 1)
+            {
+                isUnauthorized = true;
+                return;
+            }
+            */
+
+            // Initialize category with default values
+            if (category.IsActive == null)
+            {
+                category.IsActive = true;
+            }
+
+            // Load parent categories
+            parentCategories = CategoryRepository.getAllCategories();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading categories: {ex.Message}";
+            Console.WriteLine($"Error initializing page: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void CategoryActiveChanged(ChangeEventArgs e)
+    {
+        if (e.Value is bool value)
+        {
+            category.IsActive = value;
+        }
+    }
+
+    private void HandleValidSubmit()
+    {
+        try
+        {
+            // Set default value for IsActive if it's null
+            if (category.IsActive == null)
+            {
+                category.IsActive = false;
+            }
+            
+            // Add the category
+            CategoryRepository.AddCategory(category);
+            
+            // Redirect to the category list
+            NavigationManager.NavigateTo("/categories");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating category: {ex.Message}";
+            StateHasChanged();
+            Console.WriteLine($"Error creating category: {ex.Message}");
+        }
+    }
+}

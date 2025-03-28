@@ -1,0 +1,161 @@
+﻿@page "/categories"
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using A02_BOs
+@using A02_Repos
+@implements IAsyncDisposable
+@inject ICategoriesRepo CategoryRepository
+@inject NavigationManager NavigationManager
+
+<PageTitle>Category Management</PageTitle>
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Category Management</h3>
+            <a href="/categories/create" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Add New Category
+            </a>
+        </div>
+        
+        <div class="card-body">
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" @bind="searchText" @bind:event="oninput" @onkeyup="FilterCategories" class="form-control" placeholder="Search categories...">
+                </div>
+            </div>
+            
+            <!-- Using QuickGrid with enhanced styling -->
+            <QuickGrid Class="table table-striped table-hover" Items="@filteredCategories">
+                <PropertyColumn Title="Category Name" Property="category => category.CategoryName">
+                    
+                </PropertyColumn>
+                
+                <PropertyColumn Title="Description" Property="category => category.CategoryDesciption" />
+                
+                <TemplateColumn Title="Parent Category">
+                    <div>
+                        @{
+                            var parentName = GetParentCategoryName(context);
+                            @if (!string.IsNullOrEmpty(parentName))
+                            {
+                                @parentName
+                            }
+                            else
+                            {
+                                <span class="text-muted">None</span>
+                            }
+                        }
+                    </div>
+                </TemplateColumn>
+                
+                <TemplateColumn Title="Status">
+                    @if(context.IsActive == true)
+                    {
+                        <span class="badge bg-success">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-danger">Inactive</span>
+                    }
+                </TemplateColumn>
+
+                <TemplateColumn Title="Actions">
+                    <div class="btn-group" role="group">
+                        <a href="@($"categories/edit?categoryid={context.CategoryId}")" class="btn btn-sm btn-primary">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <a href="@($"categories/details?categoryid={context.CategoryId}")" class="btn btn-sm btn-info">
+                            <i class="bi bi-info-circle"></i> Details
+                        </a>
+                        <a href="@($"categories/delete?categoryid={context.CategoryId}")" class="btn btn-sm btn-danger">
+                            <i class="bi bi-trash"></i> Delete
+                        </a>
+                    </div>
+                </TemplateColumn>
+            </QuickGrid>
+            
+            @if (!filteredCategories.Any())
+            {
+                <div class="alert alert-info text-center mt-3">
+                    <i class="bi bi-info-circle"></i> No categories found. Create your first category!
+                </div>
+            }
+        </div>
+        
+        <div class="card-footer text-muted">
+            <small>Total categories: @filteredCategories.Count()</small>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Category> allCategories = new List<Category>();
+    private IQueryable<Category> filteredCategories;
+    private string searchText = "";
+
+    // Authentication code commented out for testing
+    /*
+    private async Task CheckAuthorization()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext != null)
+        {
+            var email = httpContext.Session.GetString("Email");
+            var roleId = httpContext.Session.GetInt32("RoleId");
+
+            if (string.IsNullOrEmpty(email) || roleId != 1)
+            {
+                NavigationManager.NavigateTo("/unauthorized", forceLoad: true);
+                return;
+            }
+        }
+    }
+    */
+
+    protected override void OnInitialized()
+    {
+        // Authentication check commented out for testing
+        // await CheckAuthorization();
+        
+        // Use the repository to get all categories instead of direct DbContext access
+        allCategories = CategoryRepository.getAllCategories();
+        
+        // Initialize filtered categories
+        filteredCategories = allCategories.AsQueryable();
+    }
+
+    private void FilterCategories()
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            filteredCategories = allCategories.AsQueryable();
+        }
+        else
+        {
+            searchText = searchText.ToLower();
+            filteredCategories = allCategories
+                .Where(c => 
+                    (c.CategoryName != null && c.CategoryName.ToLower().Contains(searchText)) || 
+                    (c.CategoryDesciption != null && c.CategoryDesciption.ToLower().Contains(searchText))
+                )
+                .AsQueryable();
+        }
+    }
+
+    private string GetParentCategoryName(Category category)
+    {
+        if (category.ParentCategoryId.HasValue)
+        {
+            // Using the repository pattern to get parent category by ID
+            var parentCategory = CategoryRepository.GetCategoryId(category.ParentCategoryId.Value);
+            return parentCategory?.CategoryName;
+        }
+        return null;
+    }
+
+    // Since we're no longer using DbContext directly, we can simplify the dispose method
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+}

@@ -1,0 +1,265 @@
+﻿@page "/categories/edit"
+@using A02_BOs
+@using A02_Repos
+@using System.Collections.Generic
+@using Microsoft.AspNetCore.Mvc.Rendering
+@inject ICategoriesRepo CategoryRepository
+@inject NavigationManager NavigationManager
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Edit Category</PageTitle>
+
+@if (isUnauthorized)
+{
+    <div class="alert alert-danger">
+        <h4>Unauthorized</h4>
+        <p>You do not have permission to access this page.</p>
+    </div>
+}
+else if (isLoading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (category == null)
+{
+    <div class="alert alert-danger">
+        <h4>Not Found</h4>
+        <p>The requested category could not be found.</p>
+    </div>
+}
+else
+{
+    <div class="container my-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h2 class="mb-0">Edit Category</h2>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger mb-3">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        @errorMessage
+                    </div>
+                }
+                
+                <EditForm Model="category" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" />
+                    
+                    <input type="hidden" @bind-value="category.CategoryId" />
+                    
+                    <div class="mb-3">
+                        <label for="categoryName" class="form-label">Category Name</label>
+                        <InputText id="categoryName" @bind-Value="category.CategoryName" class="form-control" />
+                        <ValidationMessage For="@(() => category.CategoryName)" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="categoryDescription" class="form-label">Category Description</label>
+                        <InputText id="categoryDescription" @bind-Value="category.CategoryDesciption" class="form-control" />
+                        <ValidationMessage For="@(() => category.CategoryDesciption)" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="parentCategory" class="form-label">Parent Category</label>
+                        <select id="parentCategory" class="form-select" value="@(category.ParentCategoryId?.ToString() ?? "")" @onchange="ParentCategoryChanged">
+                            <option value="">-- Select Parent Category --</option>
+                            @foreach (var cat in availableParentCategories)
+                            {
+                                <option value="@cat.CategoryId">@cat.CategoryName</option>
+                            }
+                        </select>
+                        <div class="form-text">
+                            Current parent: 
+                            @if (category.ParentCategoryId.HasValue && parentCategoryName != null)
+                            {
+                                <span class="fw-bold">@parentCategoryName</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">None</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input type="checkbox" id="isActive" class="form-check-input" 
+                               checked="@isActiveNonNullable" 
+                               @onchange="@(e => CategoryActiveChanged(e))" />
+                        <label class="form-check-label" for="isActive">
+                            <span id="statusText">@(isActiveNonNullable ? "Active" : "Inactive")</span>
+                        </label>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <a href="/categories" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "categoryid")]
+    public string categoryIdString { get; set; }
+
+    private Category category;
+    private List<Category> availableParentCategories = new List<Category>();
+    private bool isLoading = true;
+    private bool isUnauthorized = false;
+    private string errorMessage = string.Empty;
+    private string parentCategoryName;
+    
+    // Property to handle the nullable bool conversion
+    private bool isActiveNonNullable
+    {
+        get => category?.IsActive ?? true;
+        set => category.IsActive = value;
+    }
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            // Authentication check commented out for testing
+            /*
+            // Check if the user is authorized
+            var email = HttpContextAccessor.HttpContext?.Session.GetString("Email");
+            var roleId = HttpContextAccessor.HttpContext?.Session.GetInt32("RoleId");
+
+            if (string.IsNullOrEmpty(email) || roleId != 1)
+            {
+                isUnauthorized = true;
+                return;
+            }
+            */
+
+            // Parse the category ID from the query string
+            if (string.IsNullOrEmpty(categoryIdString) || !short.TryParse(categoryIdString, out short categoryId))
+            {
+                // Invalid ID, don't try to load a category
+                errorMessage = "Invalid category ID";
+                isLoading = false;
+                return;
+            }
+            
+            // Load the category by ID
+            category = CategoryRepository.GetCategoryId(categoryId);
+            
+            if (category == null)
+            {
+                // Category not found
+                errorMessage = "Category not found";
+                isLoading = false;
+                return;
+            }
+
+            // Initialize category with default values if needed
+            if (category.IsActive == null)
+            {
+                category.IsActive = true;
+            }
+
+            // Load all categories for the dropdown
+            var allCategories = CategoryRepository.getAllCategories();
+            
+            // Remove the current category to prevent circular references
+            availableParentCategories = allCategories
+                .Where(c => c.CategoryId != categoryId)
+                .ToList();
+                
+            // Get parent category name if there is one
+            if (category.ParentCategoryId.HasValue)
+            {
+                var parentCategory = allCategories.FirstOrDefault(c => c.CategoryId == category.ParentCategoryId.Value);
+                if (parentCategory != null)
+                {
+                    parentCategoryName = parentCategory.CategoryName;
+                    Console.WriteLine($"Found parent category: {parentCategoryName} (ID: {parentCategory.CategoryId})");
+                }
+                else
+                {
+                    Console.WriteLine($"Parent category with ID {category.ParentCategoryId.Value} not found");
+                }
+            }
+            else
+            {
+                Console.WriteLine("No parent category set");
+            }
+                
+            // Debug information
+            Console.WriteLine($"Loaded {availableParentCategories.Count} parent categories");
+            Console.WriteLine($"Current category ID: {category.CategoryId}");
+            Console.WriteLine($"Current parent category ID: {category.ParentCategoryId}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading category: {ex.Message}";
+            Console.WriteLine($"Error initializing page: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ParentCategoryChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        Console.WriteLine($"Parent category changed to: {value}");
+        
+        if (string.IsNullOrEmpty(value))
+        {
+            category.ParentCategoryId = null;
+            parentCategoryName = null;
+        }
+        else if (short.TryParse(value, out short id))
+        {
+            category.ParentCategoryId = id;
+            var parent = availableParentCategories.FirstOrDefault(c => c.CategoryId == id);
+            parentCategoryName = parent?.CategoryName;
+        }
+    }
+
+    private void CategoryActiveChanged(ChangeEventArgs e)
+    {
+        if (e.Value is bool value)
+        {
+            category.IsActive = value;
+        }
+    }
+
+    private void HandleValidSubmit()
+    {
+        try
+        {
+            // Set default value for IsActive if it's null
+            if (category.IsActive == null)
+            {
+                category.IsActive = false;
+            }
+            
+            // Debug information before update
+            Console.WriteLine($"Updating category: {category.CategoryId}, Parent: {category.ParentCategoryId}");
+            
+            // Update the category
+            CategoryRepository.UpdateCategory(category);
+            
+            // Redirect to the category list
+            NavigationManager.NavigateTo("/categories");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating category: {ex.Message}";
+            StateHasChanged();
+            Console.WriteLine($"Error updating category: {ex.Message}");
+        }
+    }
+}

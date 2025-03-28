@@ -1,0 +1,146 @@
+﻿@page "/newsarticles"
+@using A02_BOs
+@using A02_Repos
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using System.Linq
+@implements IAsyncDisposable
+@inject INewsArticleRepository NewsArticleRepository
+@inject ITagRepo TagRepository
+@inject ICategoriesRepo CategoryRepository
+
+<PageTitle>News Articles</PageTitle>
+
+<h1>News Articles</h1>
+
+<p>
+    <a href="newsarticles/create" class="btn btn-primary">Create New</a>
+</p>
+
+@if (newsArticles == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="table-responsive">
+        <QuickGrid Items="@newsArticlesQueryable" Pagination="@pagination" Class="table table-striped table-hover">
+            <PropertyColumn Property="newsarticle => newsarticle.NewsTitle" Title="Title" />
+            <PropertyColumn Property="newsarticle => newsarticle.Headline" Title="Headline" />
+            <PropertyColumn Property="newsarticle => newsarticle.CreatedDate" Title="Created Date" Format="dd MMM yyyy" />
+            
+            <TemplateColumn Title="Tags">
+                @{
+                    // Convert string ID to int for method call
+                    var tags = GetTagsForArticle(context.NewsArticleId);
+                    foreach (var tag in tags)
+                    {
+                        <span class="badge bg-info me-1">@tag</span>
+                    }
+                }
+            </TemplateColumn>
+            
+            <TemplateColumn Title="Category">
+                @GetCategoryName(context.CategoryId)
+            </TemplateColumn>
+            
+<TemplateColumn Title="Status">
+                @if (context.NewsStatus == true)
+                {
+                    <span class="badge bg-success">Active</span>
+                }
+                else
+                {
+                    <span class="badge bg-danger">Inactive</span>
+                }
+            </TemplateColumn>       
+            
+            <PropertyColumn Property="newsarticle => GetAuthorName(newsarticle.CreatedById)" Title="Author" />
+            <PropertyColumn Property="newsarticle => newsarticle.ModifiedDate" Title="Last Updated" Format="dd MMM yyyy" />
+            
+            <TemplateColumn Title="Actions">
+                <div class="btn-group" role="group">
+                    <a href="@($"newsarticles/edit?newsarticleid={context.NewsArticleId}")" class="btn btn-sm btn-primary">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    <a href="@($"newsarticles/details?newsarticleid={context.NewsArticleId}")" class="btn btn-sm btn-info">
+                        <i class="bi bi-eye"></i> Details
+                    </a>
+                    <a href="@($"newsarticles/delete?newsarticleid={context.NewsArticleId}")" class="btn btn-sm btn-danger">
+                        <i class="bi bi-trash"></i> Delete
+                    </a>
+                </div>
+            </TemplateColumn>
+        </QuickGrid>
+        
+        <Pagination State="@pagination" />
+    </div>
+}
+
+@code {
+    private List<NewsArticle>? newsArticles;
+    private IQueryable<NewsArticle>? newsArticlesQueryable;
+    private PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
+    private string statusFilter = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        newsArticles = NewsArticleRepository.GetNewsArticles();
+        
+        // Filter logic
+        newsArticlesQueryable = newsArticles.AsQueryable();
+        
+        // Apply any filters when statusFilter changes
+        if (!string.IsNullOrEmpty(statusFilter))
+        {
+            newsArticlesQueryable = newsArticlesQueryable.Where(a => 
+                a.NewsStatus != null && a.NewsStatus.ToString().Contains(statusFilter, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+    
+    // Helper methods for displaying related information
+    private string GetCategoryName(short? categoryId)
+    {
+        if (categoryId == null) return "Uncategorized";
+        
+        // Get category name from repository
+        var category = CategoryRepository.GetCategoryId(categoryId.Value);
+        return category?.CategoryName ?? "Unknown";
+    }
+    
+    private List<string> GetTagsForArticle(string newsArticleId)
+    {
+        List<string> tagNames = new List<string>();
+        
+        // Find the article in our collection
+        var article = newsArticles?.FirstOrDefault(a => a.NewsArticleId == newsArticleId);
+        
+        // Check if article exists and has tags
+        if (article != null && article.Tags != null && article.Tags.Any())
+        {
+            // Extract tag names
+            foreach (var tag in article.Tags)
+            {
+                tagNames.Add(tag.TagName);
+            }
+        }
+        
+        return tagNames;
+    }
+    
+    private string GetAuthorName(short? createdById)
+    {
+        if (createdById == null) return "Unknown";
+        
+        // Get the article with this ID (assuming CreatedBy property has author info)
+        var article = newsArticles?.FirstOrDefault(a => a.CreatedById == createdById);
+        
+        // Return author name if available
+        return article?.CreatedBy?.AccountEmail ?? createdById.ToString();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        // If needed, dispose any resources here
+        return ValueTask.CompletedTask;
+    }
+}

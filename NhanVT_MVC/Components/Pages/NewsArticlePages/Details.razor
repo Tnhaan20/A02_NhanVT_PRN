@@ -1,0 +1,200 @@
+﻿@page "/newsarticles/details"
+@using A02_BOs
+@using A02_Repos
+@inject INewsArticleRepository NewsArticleRepository
+@inject IAccountRepository AccountRepository
+@inject ITagRepo TagRepository
+@inject ICategoriesRepo CategoryRepository
+@inject NavigationManager NavigationManager
+
+<PageTitle>Article Details</PageTitle>
+
+@if (newsarticle is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="container my-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-black text-white d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">@newsarticle.NewsTitle</h2>
+                <span class="ms-2">
+                    @if (newsarticle.NewsStatus == true)
+                    {
+                        <span class="badge bg-success">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-danger">Inactive</span>
+                    }
+                </span>
+            </div>
+            
+            <div class="card-body">
+                <div class="mb-4">
+                    <h5 class="font-weight-bold text-muted">@newsarticle.Headline</h5>
+                </div>
+
+                <!-- Meta information -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="d-flex mb-2">
+                            <span class="text-secondary me-2"><i class="bi bi-person"></i> Author:</span>
+                            <span class="fw-bold">
+                                @createdByName
+                            </span>
+                        </div>
+                        <div class="d-flex mb-2">
+                            <span class="text-secondary me-2"><i class="bi bi-calendar"></i> Published:</span>
+                            <span>@(newsarticle.CreatedDate.HasValue ? newsarticle.CreatedDate.Value.ToString("dd/MM/yyyy") : "N/A")</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex mb-2">
+                            <span class="text-secondary me-2"><i class="bi bi-pencil"></i> Updated by:</span>
+                            <span>@(string.IsNullOrEmpty(updatedByName) ? "N/A" : updatedByName)</span>
+                        </div>
+                        <div class="d-flex mb-2">
+                            <span class="text-secondary me-2"><i class="bi bi-clock"></i> Last modified:</span>
+                            <span>@(newsarticle.ModifiedDate.HasValue ? newsarticle.ModifiedDate.Value.ToString("dd/MM/yyyy, HH:mm") : "N/A")</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category and Tags -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="text-secondary me-2"><i class="bi bi-folder"></i> Category:</span>
+                            <span class="badge bg-primary">
+                                @categoryName
+                            </span>
+                        </div>
+                        <div class="d-flex align-items-center flex-wrap">
+                            <span class="text-secondary me-2"><i class="bi bi-tags"></i> Tags:</span>
+                            @if (tagNames != null && tagNames.Any())
+                            {
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var tag in tagNames)
+                                    {
+                                        <span class="badge bg-info text-dark">@tag</span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span>No tags</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="content-section p-3 bg-light rounded mb-4">
+                    <h5 class="border-bottom pb-2 mb-3">Article Content</h5>
+                    <div class="article-content">
+                        @((MarkupString)(newsarticle.NewsContent ?? "No content available"))
+                    </div>
+                </div>
+
+                <!-- Source -->
+                <div class="mb-3">
+                    <h6 class="text-secondary"><i class="bi bi-link"></i> Source:</h6>
+                    <p class="ps-3">
+                        @if (string.IsNullOrEmpty(newsarticle.NewsSource))
+                        {
+                            <span class="fst-italic">No source provided</span>
+                        }
+                        else
+                        {
+                            <a href="@newsarticle.NewsSource" target="_blank">@newsarticle.NewsSource</a>
+                        }
+                    </p>
+                </div>
+            </div>
+            
+            <div class="card-footer">
+                <div class="d-flex gap-2">
+                    <a href="@($"/newsarticles/edit?newsarticleid={newsarticle.NewsArticleId}")" class="btn btn-primary">
+                        <i class="bi bi-pencil-square"></i> Edit
+                    </a>
+                    <a href="/newsarticles" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private NewsArticle? newsarticle;
+    private string createdByName = "Unknown";
+    private string updatedByName = "Unknown";
+    private string categoryName = "Uncategorized";
+    private List<string> tagNames = new List<string>();
+
+    [SupplyParameterFromQuery]
+    private string NewsArticleId { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (string.IsNullOrEmpty(NewsArticleId))
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        newsarticle = NewsArticleRepository.getNewsById(NewsArticleId);
+        
+        if (newsarticle == null)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        // Get creator name
+        if (newsarticle.CreatedById.HasValue)
+        {
+            var creator = AccountRepository.GetAccountById(newsarticle.CreatedById.Value);
+            if (creator != null)
+            {
+                createdByName = creator.AccountName;
+            }
+        }
+        
+        // Get updater name
+        if (newsarticle.UpdatedById.HasValue)
+        {
+            var updater = AccountRepository.GetAccountById(newsarticle.UpdatedById.Value);
+            if (updater != null)
+            {
+                updatedByName = updater.AccountName;
+            }
+        }
+        
+        // Get category name
+        if (newsarticle.CategoryId.HasValue)
+        {
+            var category = CategoryRepository.GetCategoryId(newsarticle.CategoryId.Value);
+            if (category != null)
+            {
+                categoryName = category.CategoryName;
+            }
+        }
+        
+        // Get tag names
+        if (newsarticle.Tags != null && newsarticle.Tags.Any())
+        {
+            foreach (var tag in newsarticle.Tags)
+            {
+                var tagDetails = TagRepository.GetTagsId(tag.TagId);
+                if (tagDetails != null)
+                {
+                    tagNames.Add(tagDetails.TagName);
+                }
+            }
+        }
+    }
+}

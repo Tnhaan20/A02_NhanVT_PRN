@@ -2,22 +2,28 @@ using A02_Repos;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using NhanVT_MVC.Components;
-
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add interactive server components
+// Blazor services
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Add session services
+// Session
 builder.Services.AddDistributedMemoryCache();
-builder.Services.AddSession();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+});
 
-// Add HttpContextAccessor
 builder.Services.AddHttpContextAccessor();
 
-// Register repositories
+// Your repositories
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<INewsArticleRepository, NewsArticleRepository>();
 builder.Services.AddScoped<ICategoriesRepo, CategoriesRepo>();
@@ -25,21 +31,23 @@ builder.Services.AddScoped<ITagRepo, Tag_Repo>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseHsts();
+    app.UseMigrationsEndPoint();
 }
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
-app.UseSession();
 app.UseRouting();
+
+// IMPORTANT: Call UseSession before mapping Blazor
+app.UseSession();
 app.UseAntiforgery();
 
-// Map razor components with interactive server render mode
+// Finally, map your Blazor app
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+   .AddInteractiveServerRenderMode();
 
 app.Run();
