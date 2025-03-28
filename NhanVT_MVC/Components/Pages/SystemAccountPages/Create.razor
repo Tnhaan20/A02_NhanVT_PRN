@@ -1,0 +1,167 @@
+﻿@page "/systemaccounts/create"
+@using A02_BOs
+@using A02_Repos
+@using System.ComponentModel.DataAnnotations
+@inject IAccountRepository AccountRepository
+@inject NavigationManager NavigationManager
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Create Account</PageTitle>
+
+@if (isUnauthorized)
+{
+    <div class="alert alert-danger">
+        <h4>Unauthorized</h4>
+        <p>You do not have permission to access this page.</p>
+    </div>
+}
+else
+{
+    <div class="container mt-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Create Account</h3>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger mb-3">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        @errorMessage
+                    </div>
+                }
+                
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success mb-3">
+                        <i class="bi bi-check-circle me-2"></i>
+                        @successMessage
+                    </div>
+                }
+                
+                <EditForm Model="account" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" />
+                    
+                    <div class="mb-3">
+                        <label for="accountName" class="form-label">Account Name</label>
+                        <InputText id="accountName" @bind-Value="account.AccountName" class="form-control" />
+                        <ValidationMessage For="@(() => account.AccountName)" class="text-danger" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="accountEmail" class="form-label">Email</label>
+                        <InputText id="accountEmail" @bind-Value="account.AccountEmail" class="form-control" />
+                        <ValidationMessage For="@(() => account.AccountEmail)" class="text-danger" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="accountRole" class="form-label">Role</label>
+                        <InputSelect id="accountRole" @bind-Value="account.AccountRole" class="form-select">
+                            <option value="">-- Select Role --</option>
+                            <option value="1">Manager</option>
+                            <option value="2">Staff</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(() => account.AccountRole)" class="text-danger" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="accountPassword" class="form-label">Password</label>
+                        <InputText id="accountPassword" @bind-Value="account.AccountPassword" class="form-control" type="password" />
+                        <ValidationMessage For="@(() => account.AccountPassword)" class="text-danger" />
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Create</button>
+                        <a href="/accounts" class="btn btn-outline-secondary">Back to List</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private SystemAccount account = new SystemAccount();
+    private bool isUnauthorized = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    
+    protected override void OnInitialized()
+    {
+        // try
+        // {
+        //     Authorization check
+        //     var httpContext = HttpContextAccessor.HttpContext;
+        //     if (httpContext != null)
+        //     {
+        //         var email = httpContext.Session.GetString("Email");
+        //         var roleId = httpContext.Session.GetInt32("RoleId");
+        //         var isAdmin = httpContext.Session.GetString("IsAdmin");
+
+        //         if (string.IsNullOrEmpty(email))
+        //         {
+        //             NavigationManager.NavigateTo("/login");
+        //             return;
+        //         }
+
+        //         Check authorization - only admin or role 1 can access
+        //         if ((roleId != 1 && roleId != 2) && !(isAdmin == "true"))
+        //         {
+        //             isUnauthorized = true;
+        //             return;
+        //         }
+        //     }
+        // }
+        // catch (Exception ex)
+        // {
+        //     errorMessage = $"Error initializing page: {ex.Message}";
+        //     Console.WriteLine($"Error initializing page: {ex.Message}");
+        // }
+    }
+
+    private void HandleValidSubmit()
+    {
+        try
+        {
+            // Clear previous messages
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            
+            // Validate required fields
+            if (string.IsNullOrEmpty(account.AccountName) ||
+                string.IsNullOrEmpty(account.AccountEmail) ||
+                string.IsNullOrEmpty(account.AccountPassword) ||
+                !account.AccountRole.HasValue)
+            {
+                errorMessage = "All fields are required.";
+                return;
+            }
+
+            // Check if email already exists
+            var existingAccount = AccountRepository.GetAccountByEmail(account.AccountEmail);
+            if (existingAccount != null)
+            {
+                errorMessage = "This email is already registered.";
+                return;
+            }
+
+            // Add the account
+            AccountRepository.AddAccount(account);
+            
+            // Show success message
+            successMessage = "Account created successfully!";
+            
+            // Clear form for next entry
+            account = new SystemAccount();
+            
+            // Optional: navigate back to list
+            // NavigationManager.NavigateTo("/accounts");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating account: {ex.Message}";
+            Console.WriteLine($"Error creating account: {ex.Message}");
+        }
+    }
+}

@@ -1,4 +1,4 @@
-﻿@page "/accounts"
+﻿@page "/systemaccounts"
 @using A02_BOs
 @using A02_Repos
 @using Microsoft.AspNetCore.Components.QuickGrid
@@ -14,7 +14,7 @@
     <div class="card shadow">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h3 class="mb-0">Manage Accounts</h3>
-            <a href="/accounts/create" class="btn btn-success">
+            <a href="/systemaccounts/create" class="btn btn-success">
                 <i class="bi bi-plus-circle"></i> Create New Account
             </a>
         </div>
@@ -67,13 +67,13 @@
                                     <td>@account.AccountPassword</td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <a href="@($"accounts/edit?accountid={account.AccountId}")" class="btn btn-sm btn-primary">
+                                            <a href="@($"systemaccounts/edit?accountid={account.AccountId}")" class="btn btn-sm btn-primary">
                                                 <i class="bi bi-pencil"></i> Edit
                                             </a>
-                                            <a href="@($"accounts/details?accountid={account.AccountId}")" class="btn btn-sm btn-info">
+                                            <a href="@($"systemaccounts/details?accountid={account.AccountId}")" class="btn btn-sm btn-info">
                                                 <i class="bi bi-info-circle"></i> Details
                                             </a>
-                                            <a href="@($"accounts/delete?accountid={account.AccountId}")" class="btn btn-sm btn-danger">
+                                            <a href="@($"systemaccounts/delete?accountid={account.AccountId}")" class="btn btn-sm btn-danger">
                                                 <i class="bi bi-trash"></i> Delete
                                             </a>
                                         </div>
@@ -109,28 +109,28 @@
         try
         {
             // Check if the user is authorized
-            var httpContext = HttpContextAccessor.HttpContext;
-            if (httpContext != null)
-            {
-                var email = httpContext.Session.GetString("Email");
-                var isAdmin = httpContext.Session.GetString("IsAdmin");
-                var roleId = httpContext.Session.GetInt32("RoleId");
+            // var httpContext = HttpContextAccessor.HttpContext;
+            // if (httpContext != null)
+            // {
+            //     var email = httpContext.Session.GetString("Email");
+            //     var isAdmin = httpContext.Session.GetString("IsAdmin");
+            //     var roleId = httpContext.Session.GetInt32("RoleId");
 
-                if (string.IsNullOrEmpty(email) && string.IsNullOrEmpty(isAdmin))
-                {
-                    // User is not logged in, redirect to login
-                    NavigationManager.NavigateTo("/login");
-                    return;
-                }
+            //     if (string.IsNullOrEmpty(email) && string.IsNullOrEmpty(isAdmin))
+            //     {
+            //         User is not logged in, redirect to login
+            //         NavigationManager.NavigateTo("/login");
+            //         return;
+            //     }
 
-                if ((roleId != 1 && roleId != 2) && !(isAdmin == "true"))
-                {
-                    // User is not authorized to view this page
-                    isUnauthorized = true;
-                    isLoading = false;
-                    return;
-                }
-            }
+            //     if ((roleId != 1 && roleId != 2) && !(isAdmin == "true"))
+            //     {
+            //         User is not authorized to view this page
+            //         isUnauthorized = true;
+            //         isLoading = false;
+            //         return;
+            //     }
+            // }
 
             // User is authorized, load accounts
             accounts = AccountRepository.getAllAccounts();
