@@ -6,4 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\A02_Repos\A02_Repos.csproj" />
+  </ItemGroup>
+
 </Project>

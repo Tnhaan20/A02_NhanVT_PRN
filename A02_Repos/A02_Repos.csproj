@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\A02_DAOs\A02_DAOs.csproj" />
+  </ItemGroup>
+
 </Project>
