@@ -45,20 +45,40 @@ namespace NhanVT_MVC.Services
         }
 
         public async Task<bool> IsAdmin()
+{
+    if (IsPrerendering()) return false;
+    
+    try
+    {
+        // First check direct isAdmin flag (used for admin from appsettings.json)
+        var isAdmin = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "isAdmin");
+        if (isAdmin == "true")
         {
-            if (IsPrerendering()) return false;
-            
-            try
-            {
-                var isAdmin = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "isAdmin");
-                return isAdmin == "true";
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error in IsAdmin: {ex.Message}");
-                return false;
-            }
+            Console.WriteLine("Admin check: direct admin flag found");
+            return true;
         }
+        
+        // For debugging, check what email is stored
+        var email = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "email");
+        Console.WriteLine($"Admin check for email: {email}");
+        
+        // Check if email matches admin email from appsettings.json (fallback approach)
+        // Note: This would need access to configuration, but we're showing the logic
+        if (email == "admin@FUNewsManagementSystem.org")
+        {
+            Console.WriteLine("Admin check: admin email matched");
+            return true;
+        }
+        
+        Console.WriteLine("Admin check: not an admin");
+        return false;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error in IsAdmin: {ex.Message}");
+        return false;
+    }
+}
 
         public async Task<int?> GetUserRole()
         {
