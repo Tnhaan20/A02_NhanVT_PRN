@@ -10,6 +10,10 @@
 
 <PageTitle>News Articles</PageTitle>
 
+<AuthCheck AllowedRoles="new[] { 1, 2 }">
+
+
+
 <h1>News Articles</h1>
 
 <p>
@@ -75,6 +79,8 @@ else
         <Pagination State="@pagination" />
     </div>
 }
+</AuthCheck>
+
 
 @code {
     private List<NewsArticle>? newsArticles;

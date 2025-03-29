@@ -9,6 +9,7 @@
 @inject IJSRuntime JSRuntime
 
 <PageTitle>News Statistics Report</PageTitle>
+<AuthCheck RequireAdmin="true"> 
 
 <div class="container mt-4">
     <h2 class="mb-4">News Statistics Report</h2>
@@ -141,7 +142,7 @@
         </div>
     }
 </div>
-
+</AuthCheck>
 @code {
     private DateTime startDate = DateTime.Today.AddMonths(-1);
     private DateTime endDate = DateTime.Today;

@@ -10,6 +10,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Disable prerendering by configuring the application to use InteractiveServer as default
+builder.Services.AddServerSideBlazor(options =>
+{
+    // This affects how the server handles the Blazor components
+    options.DetailedErrors = builder.Environment.IsDevelopment();
+    options.DisconnectedCircuitMaxRetained = 100;
+    options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(3);
+});
+
 // Session
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -17,8 +26,6 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.SameSite = SameSiteMode.Strict;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
 
 builder.Services.AddHttpContextAccessor();
@@ -28,6 +35,7 @@ builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<INewsArticleRepository, NewsArticleRepository>();
 builder.Services.AddScoped<ICategoriesRepo, CategoriesRepo>();
 builder.Services.AddScoped<ITagRepo, Tag_Repo>();
+builder.Services.AddScoped<NhanVT_MVC.Services.AuthService>();
 
 var app = builder.Build();
 
@@ -46,7 +54,7 @@ app.UseRouting();
 app.UseSession();
 app.UseAntiforgery();
 
-// Finally, map your Blazor app
+// Map your Blazor app with interactive server rendering
 app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
 

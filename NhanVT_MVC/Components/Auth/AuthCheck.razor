@@ -1,0 +1,139 @@
+﻿@using NhanVT_MVC.Services
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (isAuthenticated)
+{
+    @ChildContent
+}
+else
+{
+    <div class="alert alert-warning">
+        <h4>Authentication Required</h4>
+        <p>You need to log in to access this page.</p>
+        <button class="btn btn-primary" @onclick="RedirectToLogin">Log in</button>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    [Parameter]
+    public int[] AllowedRoles { get; set; } = Array.Empty<int>();
+
+    [Parameter]
+    public bool RequireAdmin { get; set; } = false;
+
+    private bool isAuthenticated = false;
+    private bool isLoading = true;
+    private bool isInitialized = false;
+
+    // Use this instead of OnInitializedAsync to avoid JS interop during prerendering
+    protected override void OnInitialized()
+    {
+        // Just set the initial state
+        isLoading = true;
+        isAuthenticated = false;
+    }
+
+    // Move JS interop calls to OnAfterRenderAsync
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Now it's safe to use JS interop
+            await CheckAuthentication();
+        }
+    }
+
+    private async Task CheckAuthentication()
+    {
+        try
+        {
+            bool isAuth = await AuthService.IsAuthenticated();
+            
+            if (!isAuth)
+            {
+                // User is not authenticated at all - redirect to login
+                isAuthenticated = false;
+                isLoading = false;
+                StateHasChanged(); // Update the UI
+                
+                // Add a small delay to ensure rendering completes
+                await Task.Delay(100);
+                
+                // Redirect to login page
+                NavigationManager.NavigateTo("/login", forceLoad: true);
+                return;
+            }
+            
+            // User is authenticated, now check roles
+            if (RequireAdmin)
+            {
+                // Check if user is admin
+                isAuthenticated = await AuthService.IsAdmin();
+                if (!isAuthenticated)
+                {
+                    isLoading = false;
+                    StateHasChanged(); // Update the UI
+                    NavigationManager.NavigateTo("/unauthorized", forceLoad: true);
+                    return;
+                }
+            }
+            else if (AllowedRoles != null && AllowedRoles.Length > 0)
+            {
+                // Check if user has allowed role
+                int? userRole = await AuthService.GetUserRole();
+                
+                // For debugging
+                Console.WriteLine($"User role: {userRole}, Allowed roles: [{string.Join(", ", AllowedRoles)}]");
+                
+                isAuthenticated = userRole.HasValue && AllowedRoles.Contains(userRole.Value);
+                
+                if (!isAuthenticated)
+                {
+                    isLoading = false;
+                    StateHasChanged(); // Update the UI
+                    NavigationManager.NavigateTo("/unauthorized", forceLoad: true);
+                    return;
+                }
+            }
+            else
+            {
+                // Just needs to be authenticated
+                isAuthenticated = true;
+            }
+
+            isLoading = false;
+            StateHasChanged(); // Make sure UI is updated
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in AuthCheck: {ex.Message}");
+            isLoading = false;
+            isAuthenticated = false;
+            StateHasChanged();
+        }
+    }
+
+    private void RedirectToLogin()
+    {
+        NavigationManager.NavigateTo("/login");
+    }
+
+    // Clean up any resources
+    public void Dispose()
+    {
+        // Clean up code if needed
+    }
+}

@@ -1,0 +1,28 @@
+﻿@page "/unauthorized"
+@inject NavigationManager NavigationManager
+
+<PageTitle>Access Denied</PageTitle>
+
+<div class="container">
+    <div class="alert alert-danger mt-4">
+        <h2>Access Denied</h2>
+        <p>You do not have permission to access this resource.</p>
+
+        <div class="mt-4">
+            <button class="btn btn-primary" @onclick="GoToHomePage">Go to Homepage</button>
+            <button class="btn btn-outline-secondary ms-2" @onclick="GoToLogin">Log in with different account</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private void GoToHomePage()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    private void GoToLogin()
+    {
+        NavigationManager.NavigateTo("/logout");
+    }
+}

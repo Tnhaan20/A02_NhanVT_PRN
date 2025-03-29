@@ -10,6 +10,9 @@
 
 <PageTitle>Manage Accounts</PageTitle>
 
+
+<AuthCheck RequireAdmin="true"> 
+
 <div class="container mt-4">
     <div class="card shadow">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
@@ -98,7 +101,7 @@
         </div>
     </div>
 </div>
-
+</AuthCheck>
 @code {
     private List<SystemAccount> accounts = new List<SystemAccount>();
     private bool isLoading = true;
