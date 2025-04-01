@@ -1,312 +1,333 @@
-﻿@* @* @page "/profile" *@
-@* @using A02_BOs *@
-@* @using A02_Repos *@
-@* @inject IAccountRepository AccountRepository *@
-@* @inject INewsArticleRepository NewsArticleRepository *@
-@* @inject NavigationManager NavigationManager *@
-@* @inject IHttpContextAccessor HttpContextAccessor *@
-@* @inject IJSRuntime JSRuntime *@
+﻿@page "/profile" 
+@using A02_BOs 
+@using A02_Repos 
+@using NhanVT_MVC.Services
+@inject IAccountRepository AccountRepository 
+@inject INewsArticleRepository NewsArticleRepository 
+@inject ICategoriesRepo CategoryRepository
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager 
+@inject IHttpContextAccessor HttpContextAccessor 
+@inject IJSRuntime JSRuntime 
 
-@* <PageTitle>My Profile</PageTitle> *@
+<PageTitle>My Profile</PageTitle> 
 
-@* @if (isLoading) *@
-@* { *@
-@*     <div class="d-flex justify-content-center mt-5"> *@
-@*         <div class="spinner-border" role="status"> *@
-@*             <span class="visually-hidden">Loading...</span> *@
-@*         </div> *@
-@*     </div> *@
-@* } *@
-@* else if (userAccount == null) *@
-@* { *@
-@*     <div class="alert alert-danger"> *@
-@*         <p>You need to log in to view your profile.</p> *@
-@*         <a href="/login" class="btn btn-primary">Go to Login</a> *@
-@*     </div> *@
-@* } *@
-@* else *@
-@* { *@
-@*     <div class="container mt-4"> *@
-@*         <div class="row"> *@
-@*             <!-- User Profile Section --> *@
-@*             <div class="col-md-5"> *@
-@*                 <div class="card"> *@
-@*                     <div class="card-header bg-primary text-white"> *@
-@*                         <h4 class="mb-0">My Profile</h4> *@
-@*                     </div> *@
-@*                     <div class="card-body"> *@
-@*                         @if (!string.IsNullOrEmpty(successMessage)) *@
-@*                         { *@
-@*                             <div class="alert alert-success"> *@
-@*                                 <i class="bi bi-check-circle"></i> @successMessage *@
-@*                             </div> *@
-@*                         } *@
-                        
-@*                         @if (!string.IsNullOrEmpty(errorMessage)) *@
-@*                         { *@
-@*                             <div class="alert alert-danger"> *@
-@*                                 <i class="bi bi-exclamation-circle"></i> @errorMessage *@
-@*                             </div> *@
-@*                         } *@
+@if (isLoading) 
+{ 
+    <div class="d-flex justify-content-center mt-5"> 
+        <div class="spinner-border" role="status"> 
+            <span class="visually-hidden">Loading...</span> 
+        </div> 
+    </div> 
+}
+else if (isAdmin)
+{
+    <div class="alert alert-warning">
+        <h4>Access Denied</h4>
+        <p>Administrators are not allowed to access the profile page.</p>
+        <button class="btn btn-primary" @onclick="RedirectToHome">Go to Home</button>
+    </div>
+}
+else if (userAccount == null) 
+{ 
+    <div class="alert alert-danger"> 
+        <p>You need to log in to view your profile.</p> 
+        <a href="/login" class="btn btn-primary">Go to Login</a> 
+    </div> 
+} 
+else 
+{
+    <!-- Profile UI remains unchanged -->
+    <div class="container mt-4"> 
+        <div class="row"> 
+            <!-- User Profile Section --> 
+            <div class="col-md-5"> 
+                <div class="card"> 
+                    <div class="card-header bg-primary text-white"> 
+                        <h4 class="mb-0">My Profile</h4> 
+                    </div> 
+                    <div class="card-body"> 
+                        @if (!string.IsNullOrEmpty(successMessage)) 
+                        { 
+                            <div class="alert alert-success"> 
+                                <i class="bi bi-check-circle"></i> @successMessage 
+                            </div> 
+                        } 
+                       
+                        @if (!string.IsNullOrEmpty(errorMessage)) 
+                        { 
+                            <div class="alert alert-danger"> 
+                                <i class="bi bi-exclamation-circle"></i> @errorMessage 
+                            </div> 
+                        } 
 
-@*                         <EditForm Model="userAccount" OnValidSubmit="HandleValidSubmit"> *@
-@*                             <DataAnnotationsValidator /> *@
-@*                             <ValidationSummary class="text-danger" /> *@
-                            
-@*                             <input type="hidden" @bind-value="userAccount.AccountId" /> *@
+                        <EditForm Model="userAccount" OnValidSubmit="HandleValidSubmit"> 
+                            <DataAnnotationsValidator /> 
+                            <ValidationSummary class="text-danger" /> 
+                           
+                            <input type="hidden" @bind-value="userAccount.AccountId" /> 
 
-@*                             <div class="mb-3"> *@
-@*                                 <label class="form-label">Full Name</label> *@
-@*                                 <InputText @bind-Value="userAccount.AccountName" class="form-control" /> *@
-@*                                 <ValidationMessage For="@(() => userAccount.AccountName)" class="text-danger" /> *@
-@*                             </div> *@
+                            <div class="mb-3"> 
+                                <label class="form-label">Full Name</label> 
+                                <InputText @bind-Value="userAccount.AccountName" class="form-control" /> 
+                                <ValidationMessage For="@(() => userAccount.AccountName)" class="text-danger" /> 
+                            </div> 
 
-@*                             <div class="mb-3"> *@
-@*                                 <label class="form-label">Email</label> *@
-@*                                 <input value="@userAccount.AccountEmail" class="form-control" disabled /> *@
-@*                             </div> *@
+                            <div class="mb-3"> 
+                                <label class="form-label">Email</label> 
+                                <input value="@userAccount.AccountEmail" class="form-control" /> 
+                            </div> 
 
-@*                             <div class="mb-3"> *@
-@*                                 <label class="form-label">Password</label> *@
-@*                                 <InputText @bind-Value="userAccount.AccountPassword" class="form-control" type="password" /> *@
-@*                                 <ValidationMessage For="@(() => userAccount.AccountPassword)" class="text-danger" /> *@
-@*                             </div> *@
+                            <div class="mb-3"> 
+                                <label class="form-label">Password</label> 
+                                <InputText @bind-Value="userAccount.AccountPassword" class="form-control" /> 
+                                <ValidationMessage For="@(() => userAccount.AccountPassword)" class="text-danger" /> 
+                            </div> 
 
-@*                             <div class="mb-3"> *@
-@*                                 <label class="form-label">Role</label> *@
-@*                                 <input class="form-control" value="@(userAccount.AccountRole == 1 ? "Manager" : "Staff")" disabled /> *@
-@*                             </div> *@
+                            <div class="mb-3"> 
+                                <label class="form-label">Role</label> 
+                                <input class="form-control" value="@(userAccount.AccountRole == 1 ? "Staff" : "Lecturer")" disabled /> 
+                            </div> 
 
-@*                             <button type="submit" class="btn btn-primary"> *@
-@*                                 <i class="bi bi-save"></i> Update Profile *@
-@*                             </button> *@
-@*                         </EditForm> *@
-@*                     </div> *@
-@*                 </div> *@
-@*             </div> *@
+                            <button type="submit" class="btn btn-primary"> 
+                                <i class="bi bi-save"></i> Update Profile 
+                            </button> 
+                        </EditForm> 
+                    </div> 
+                </div> 
+            </div> 
 
-@*             <!-- User Stats Section --> *@
-@*             <div class="col-md-7"> *@
-@*                 <div class="card mb-4"> *@
-@*                     <div class="card-header bg-success text-white"> *@
-@*                         <h4 class="mb-0">My Statistics</h4> *@
-@*                     </div> *@
-@*                     <div class="card-body"> *@
-@*                         <div class="row"> *@
-@*                             <div class="col-md-6 mb-3"> *@
-@*                                 <div class="card bg-primary text-white"> *@
-@*                                     <div class="card-body"> *@
-@*                                         <h5 class="card-title">Total Articles</h5> *@
-@*                                         <p class="card-text display-4">@(userArticles?.Count ?? 0)</p> *@
-@*                                     </div> *@
-@*                                 </div> *@
-@*                             </div> *@
-@*                             <div class="col-md-6 mb-3"> *@
-@*                                 <div class="card bg-info text-white"> *@
-@*                                     <div class="card-body"> *@
-@*                                         <h5 class="card-title">Active Articles</h5> *@
-@*                                         <p class="card-text display-4">@(userArticles?.Count(a => a.NewsStatus == true) ?? 0)</p> *@
-@*                                     </div> *@
-@*                                 </div> *@
-@*                             </div> *@
-@*                         </div> *@
-@*                     </div> *@
-@*                 </div> *@
-@*             </div> *@
-@*         </div> *@
+            <!-- User Stats Section --> 
+            <div class="col-md-7"> 
+                <div class="card mb-4"> 
+                    <div class="card-header bg-success text-white"> 
+                        <h4 class="mb-0">My Statistics</h4> 
+                    </div> 
+                    <div class="card-body"> 
+                        <div class="row"> 
+                            <div class="col-md-6 mb-3"> 
+                                <div class="card bg-primary text-white"> 
+                                    <div class="card-body"> 
+                                        <h5 class="card-title">Total Articles</h5> 
+                                        <p class="card-text display-4">@(userArticles?.Count ?? 0)</p> 
+                                    </div> 
+                                </div> 
+                            </div> 
+                            <div class="col-md-6 mb-3"> 
+                                <div class="card bg-info text-white"> 
+                                    <div class="card-body"> 
+                                        <h5 class="card-title">Active Articles</h5> 
+                                        <p class="card-text display-4">@(userArticles?.Count(a => a.NewsStatus == true) ?? 0)</p> 
+                                    </div> 
+                                </div> 
+                            </div> 
+                        </div> 
+                    </div> 
+                </div> 
+            </div> 
+        </div> 
 
-@*         <!-- User's News Articles Section --> *@
-@*         <div class="row mt-4"> *@
-@*             <div class="col-12"> *@
-@*                 <div class="card"> *@
-@*                     <div class="card-header bg-info text-white"> *@
-@*                         <h4 class="mb-0">My News Articles</h4> *@
-@*                     </div> *@
-@*                     <div class="card-body"> *@
-@*                         @if (userArticles != null && userArticles.Any()) *@
-@*                         { *@
-@*                             <div class="table-responsive"> *@
-@*                                 <table class="table table-striped"> *@
-@*                                     <thead> *@
-@*                                         <tr> *@
-@*                                             <th>Title</th> *@
-@*                                             <th>Category</th> *@
-@*                                             <th>Created Date</th> *@
-@*                                             <th>Status</th> *@
-@*                                             <th>Actions</th> *@
-@*                                         </tr> *@
-@*                                     </thead> *@
-@*                                     <tbody> *@
-@*                                         @foreach (var article in userArticles) *@
-@*                                         { *@
-@*                                             <tr> *@
-@*                                                 <td>@article.NewsTitle</td> *@
-@*                                                 <td>@GetCategoryName(article.CategoryId)</td> *@
-@*                                                 <td>@article.CreatedDate?.ToString("dd/MM/yyyy")</td> *@
-@*                                                 <td> *@
-@*                                                     @if (article.NewsStatus == true) *@
-@*                                                     { *@
-@*                                                         <span class="badge bg-success">Active</span> *@
-@*                                                     } *@
-@*                                                     else *@
-@*                                                     { *@
-@*                                                         <span class="badge bg-danger">Inactive</span> *@
-@*                                                     } *@
-@*                                                 </td> *@
-@*                                                 <td> *@
-@*                                                     <a href="@($"/newsarticles/details?newsarticleid={article.NewsArticleId}")" class="btn btn-sm btn-info">View</a> *@
-@*                                                     <a href="@($"/newsarticles/edit?newsarticleid={article.NewsArticleId}")" class="btn btn-sm btn-primary">Edit</a> *@
-@*                                                 </td> *@
-@*                                             </tr> *@
-@*                                         } *@
-@*                                     </tbody> *@
-@*                                 </table> *@
-@*                             </div> *@
-@*                         } *@
-@*                         else *@
-@*                         { *@
-@*                             <div class="alert alert-info"> *@
-@*                                 You haven't created any news articles yet. *@
-@*                                 <a href="/newsarticles/create" class="alert-link">Create your first article</a> *@
-@*                             </div> *@
-@*                         } *@
-@*                     </div> *@
-@*                 </div> *@
-@*             </div> *@
-@*         </div> *@
-@*     </div> *@
-@* } *@
+        <!-- User's News Articles Section --> 
+        <div class="row mt-4"> 
+            <div class="col-12"> 
+                <div class="card"> 
+                    <div class="card-header bg-info text-white"> 
+                        <h4 class="mb-0">My News Articles</h4> 
+                    </div> 
+                    <div class="card-body"> 
+                        @if (userArticles != null && userArticles.Any()) 
+                        { 
+                            <div class="table-responsive"> 
+                                <table class="table table-striped"> 
+                                    <thead> 
+                                        <tr> 
+                                            <th>Title</th> 
+                                            <th>Category</th> 
+                                            <th>Created Date</th> 
+                                            <th>Status</th> 
+                                            <th>Actions</th> 
+                                        </tr> 
+                                    </thead> 
+                                    <tbody> 
+                                        @foreach (var article in userArticles) 
+                                        { 
+                                            <tr> 
+                                                <td>@article.NewsTitle</td> 
+                                                <td>@GetCategoryName(article.CategoryId)</td> 
+                                                <td>@article.CreatedDate?.ToString("dd/MM/yyyy")</td> 
+                                                <td> 
+                                                    @if (article.NewsStatus == true) 
+                                                    { 
+                                                        <span class="badge bg-success">Active</span> 
+                                                    } 
+                                                    else 
+                                                    { 
+                                                        <span class="badge bg-danger">Inactive</span> 
+                                                    } 
+                                                </td> 
+                                                <td> 
+                                                    <a href="@($"/newsarticles/details?newsarticleid={article.NewsArticleId}")" class="btn btn-sm btn-info">View</a> 
+                                                    <a href="@($"/newsarticles/edit?newsarticleid={article.NewsArticleId}")" class="btn btn-sm btn-primary">Edit</a> 
+                                                </td> 
+                                            </tr> 
+                                        } 
+                                    </tbody> 
+                                </table> 
+                            </div> 
+                        } 
+                        else 
+                        { 
+                            <div class="alert alert-info"> 
+                                You haven't created any news articles yet. 
+                                <a href="/newsarticles/create" class="alert-link">Create your first article</a> 
+                            </div> 
+                        } 
+                    </div> 
+                </div> 
+            </div> 
+        </div> 
+    </div> 
+}
 
-@* @code { *@
-@*     private SystemAccount userAccount; *@
-@*     private List<NewsArticle> userArticles; *@
-@*     private bool isLoading = true; *@
-@*     private string successMessage; *@
-@*     private string errorMessage; *@
-@*     private Dictionary<short, string> categoriesCache = new Dictionary<short, string>(); *@
+@code { 
+    private SystemAccount userAccount;
+    private List<NewsArticle> userArticles;
+    private bool isLoading = true;
+    private bool isAdmin = false;
+    private string successMessage;
+    private string errorMessage;
+    private Dictionary<short, string> categoriesCache = new Dictionary<short, string>();
 
-@*     protected override async Task OnInitializedAsync() *@
-@*     { *@
-@*         try *@
-@*         { *@
-@*             // Check if user is logged in *@
-@*             var httpContext = HttpContextAccessor.HttpContext; *@
-@*             if (httpContext == null) *@
-@*             { *@
-@*                 NavigationManager.NavigateTo("/login"); *@
-@*                 return; *@
-@*             } *@
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Check with JavaScript if user is authenticated
+            if (!await AuthService.IsAuthenticated())
+            {
+                NavigationManager.NavigateTo("/unauthorized");
+                return;
+            }
 
-@*             var email = httpContext.Session.GetString("Email"); *@
-@*             var accountIdObj = httpContext.Session.GetInt32("AccountId"); *@
+            // Get account data from local storage
+            var userEmail = await AuthService.GetUserEmail();
+            var userId = await AuthService.GetUserId();
 
-@*             if (string.IsNullOrEmpty(email) || !accountIdObj.HasValue) *@
-@*             { *@
-@*                 NavigationManager.NavigateTo("/login"); *@
-@*                 return; *@
-@*             } *@
+            if (string.IsNullOrEmpty(userEmail) || !userId.HasValue)
+            {
+                NavigationManager.NavigateTo("/unauthorized");
+                return;
+            }
 
-@*             short accountId = (short)accountIdObj.Value; *@
+            short accountId = (short)userId.Value;
 
-@*             // Get the user account information *@
-@*             userAccount = AccountRepository.GetAccountById(accountId); *@
-@*             if (userAccount == null) *@
-@*             { *@
-@*                 NavigationManager.NavigateTo("/login"); *@
-@*                 return; *@
-@*             } *@
+            // Get the user account information
+            userAccount = AccountRepository.GetAccountById(accountId);
+            if (userAccount == null)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
 
-@*             // Get the user's news articles *@
-@*             var allArticles = NewsArticleRepository.GetNewsArticles(); *@
-@*             userArticles = allArticles *@
-@*                 .Where(a => a.CreatedById == accountId) *@
-@*                 .OrderByDescending(a => a.CreatedDate) *@
-@*                 .ToList(); *@
-@*         } *@
-@*         catch (Exception ex) *@
-@*         { *@
-@*             errorMessage = $"Error loading profile: {ex.Message}"; *@
-@*             Console.WriteLine(errorMessage); *@
-@*         } *@
-@*         finally *@
-@*         { *@
-@*             isLoading = false; *@
-@*         } *@
-@*     } *@
+            // Get the user's news articles
+            var allArticles = NewsArticleRepository.GetNewsArticles();
+            userArticles = allArticles
+                .Where(a => a.CreatedById == accountId)
+                .OrderByDescending(a => a.CreatedDate)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading profile: {ex.Message}";
+            Console.WriteLine(errorMessage);
+        }
+    }
 
-@*     private async Task HandleValidSubmit() *@
-@*     { *@
-@*         try *@
-@*         { *@
-@*             var httpContext = HttpContextAccessor.HttpContext; *@
-@*             if (httpContext == null) *@
-@*             { *@
-@*                 errorMessage = "Session information is not available"; *@
-@*                 return; *@
-@*             } *@
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Check if user is admin - must be done after render for JS interop
+            isAdmin = await AuthService.IsAdmin();
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
 
-@*             var accountIdObj = httpContext.Session.GetInt32("AccountId"); *@
-@*             if (!accountIdObj.HasValue) *@
-@*             { *@
-@*                 NavigationManager.NavigateTo("/login"); *@
-@*                 return; *@
-@*             } *@
+    private void RedirectToHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
 
-@*             short accountId = (short)accountIdObj.Value; *@
-
-@*             // Get existing account to preserve role and other fields *@
-@*             var existingAccount = AccountRepository.GetAccountById(accountId); *@
-@*             if (existingAccount == null) *@
-@*             { *@
-@*                 NavigationManager.NavigateTo("/login"); *@
-@*                 return; *@
-@*             } *@
-
-@*             // Update only the allowed fields *@
-@*             existingAccount.AccountName = userAccount.AccountName; *@
-@*             existingAccount.AccountPassword = userAccount.AccountPassword; *@
-
-@*             // Save changes *@
-@*             AccountRepository.UpdateAccount(accountId, existingAccount); *@
-
-@*             // Show success message *@
-@*             successMessage = "Your profile has been updated successfully!"; *@
-@*             errorMessage = null; *@
-
-@*             // Update the model with the latest data *@
-@*             userAccount = existingAccount; *@
-@*         } *@
-@*         catch (Exception ex) *@
-@*         { *@
-@*             errorMessage = $"Error updating profile: {ex.Message}"; *@
-@*             successMessage = null; *@
-@*             Console.WriteLine(errorMessage); *@
-@*         } *@
-@*     } *@
-
-@*     private string GetCategoryName(short? categoryId) *@
-@*     { *@
-@*         if (!categoryId.HasValue)  *@
-@*             return "Uncategorized"; *@
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            // Get user ID from localStorage instead of HttpContext
+            var userId = await AuthService.GetUserId();
             
-@*         if (categoriesCache.TryGetValue(categoryId.Value, out string name)) *@
-@*             return name; *@
-            
-@*         // Try to get from repository *@
-@*         try *@
-@*         { *@
-@*             var category = CategoryRepository.GetCategoryId(categoryId.Value); *@
-@*             if (category != null) *@
-@*             { *@
-@*                 categoriesCache[categoryId.Value] = category.CategoryName; *@
-@*                 return category.CategoryName; *@
-@*             } *@
-@*         } *@
-@*         catch *@
-@*         { *@
-@*             // Ignore errors, return unknown *@
-@*         } *@
-        
-@*         return "Unknown"; *@
-@*     } *@
-@* } *@
+            if (!userId.HasValue)
+            {
+                errorMessage = "User ID not available. Please log in again.";
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
+            short accountId = (short)userId.Value;
+
+            // Get existing account to preserve role and other fields
+            var existingAccount = AccountRepository.GetAccountById(accountId);
+            if (existingAccount == null)
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
+            // Update only the allowed fields
+            existingAccount.AccountName = userAccount.AccountName;
+            existingAccount.AccountPassword = userAccount.AccountPassword;
+
+            // Save changes
+            AccountRepository.UpdateAccount(accountId, existingAccount);
+
+            // Show success message
+            successMessage = "Your profile has been updated successfully!";
+            errorMessage = null;
+
+            // Update the model with the latest data
+            userAccount = existingAccount;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating profile: {ex.Message}";
+            successMessage = null;
+            Console.WriteLine(errorMessage);
+        }
+    }
+
+    private string GetCategoryName(short? categoryId)
+    {
+        if (!categoryId.HasValue)
+            return "Uncategorized";
+           
+        if (categoriesCache.TryGetValue(categoryId.Value, out string name))
+            return name;
+           
+        // Try to get from repository
+        try
+        {
+            var category = CategoryRepository.GetCategoryId(categoryId.Value);
+            if (category != null)
+            {
+                categoriesCache[categoryId.Value] = category.CategoryName;
+                return category.CategoryName;
+            }
+        }
+        catch
+        {
+            // Ignore errors, return unknown
+        }
+       
+        return "Unknown";
+    }
+}

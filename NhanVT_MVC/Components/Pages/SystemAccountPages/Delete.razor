@@ -69,11 +69,11 @@ else
                     <dd class="col-sm-9">
                         @if (account.AccountRole == 1)
                         {
-                            <span class="badge bg-primary">Manager</span>
+                            <span class="badge bg-primary">Staff</span>
                         }
                         else if (account.AccountRole == 2)
                         {
-                            <span class="badge bg-info">Staff</span>
+                            <span class="badge bg-info">Lecturer</span>
                         }
                         else
                         {
@@ -91,7 +91,7 @@ else
                     <button @onclick="DeleteAccount" class="btn btn-danger">
                         <i class="bi bi-trash"></i> Delete
                     </button>
-                    <a href="/accounts" class="btn btn-outline-secondary">
+                    <a href="/systemaccounts" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Cancel
                     </a>
                 </div>
@@ -175,7 +175,7 @@ else
                 AccountRepository.DeleteAccount(account.AccountId);
                 
                 // Redirect to the account list
-                NavigationManager.NavigateTo("/accounts");
+                NavigationManager.NavigateTo("/systemaccounts");
             }
         }
         catch (Exception ex)

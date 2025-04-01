@@ -59,8 +59,8 @@ else
                         <label for="accountRole" class="form-label">Role</label>
                         <InputSelect id="accountRole" @bind-Value="account.AccountRole" class="form-select">
                             <option value="">-- Select Role --</option>
-                            <option value="1">Manager</option>
-                            <option value="2">Staff</option>
+                            <option value="1">Staff</option>
+                            <option value="2">Lecturer</option>
                         </InputSelect>
                         <ValidationMessage For="@(() => account.AccountRole)" class="text-danger" />
                     </div>
@@ -73,7 +73,7 @@ else
                     
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">Create</button>
-                        <a href="/accounts" class="btn btn-outline-secondary">Back to List</a>
+                        <a href="/systemaccounts" class="btn btn-outline-secondary">Back to List</a>
                     </div>
                 </EditForm>
             </div>
@@ -156,7 +156,7 @@ else
             account = new SystemAccount();
             
             // Optional: navigate back to list
-            // NavigationManager.NavigateTo("/accounts");
+            // NavigationManager.NavigateTo("/systemaccounts");
         }
         catch (Exception ex)
         {

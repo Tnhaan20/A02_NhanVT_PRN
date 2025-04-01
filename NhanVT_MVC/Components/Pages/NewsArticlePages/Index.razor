@@ -7,78 +7,98 @@
 @inject INewsArticleRepository NewsArticleRepository
 @inject ITagRepo TagRepository
 @inject ICategoriesRepo CategoryRepository
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+@using NhanVT_MVC.Components.Auth
+@using NhanVT_MVC.Services
 
 <PageTitle>News Articles</PageTitle>
 
-<AuthCheck AllowedRoles="new[] { 1, 2 }">
+<AuthCheck RequireAdmin="false" AllowedRoles="new[] { 1, 2 }">
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (isAdmin)
+    {
+        <div class="alert alert-warning">
+            <h4>Access Denied</h4>
+            <p>Administrators are not allowed to access the news articles section.</p>
+            <button class="btn btn-primary" @onclick="RedirectToHome">Go to Home</button>
+        </div>
+    }
+    else
+    {
+        <h1>News Articles</h1>
 
+        <p>
+            <a href="newsarticles/create" class="btn btn-primary">Create New</a>
+        </p>
 
-
-<h1>News Articles</h1>
-
-<p>
-    <a href="newsarticles/create" class="btn btn-primary">Create New</a>
-</p>
-
-@if (newsArticles == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <div class="table-responsive">
-        <QuickGrid Items="@newsArticlesQueryable" Pagination="@pagination" Class="table table-striped table-hover">
-            <PropertyColumn Property="newsarticle => newsarticle.NewsTitle" Title="Title" />
-            <PropertyColumn Property="newsarticle => newsarticle.Headline" Title="Headline" />
-            <PropertyColumn Property="newsarticle => newsarticle.CreatedDate" Title="Created Date" Format="dd MMM yyyy" />
-            
-            <TemplateColumn Title="Tags">
-                @{
-                    // Convert string ID to int for method call
-                    var tags = GetTagsForArticle(context.NewsArticleId);
-                    foreach (var tag in tags)
-                    {
-                        <span class="badge bg-info me-1">@tag</span>
-                    }
-                }
-            </TemplateColumn>
-            
-            <TemplateColumn Title="Category">
-                @GetCategoryName(context.CategoryId)
-            </TemplateColumn>
-            
-<TemplateColumn Title="Status">
-                @if (context.NewsStatus == true)
-                {
-                    <span class="badge bg-success">Active</span>
-                }
-                else
-                {
-                    <span class="badge bg-danger">Inactive</span>
-                }
-            </TemplateColumn>       
-            
-            <PropertyColumn Property="newsarticle => GetAuthorName(newsarticle.CreatedById)" Title="Author" />
-            <PropertyColumn Property="newsarticle => newsarticle.ModifiedDate" Title="Last Updated" Format="dd MMM yyyy" />
-            
-            <TemplateColumn Title="Actions">
-                <div class="btn-group" role="group">
-                    <a href="@($"newsarticles/edit?newsarticleid={context.NewsArticleId}")" class="btn btn-sm btn-primary">
-                        <i class="bi bi-pencil"></i> Edit
-                    </a>
-                    <a href="@($"newsarticles/details?newsarticleid={context.NewsArticleId}")" class="btn btn-sm btn-info">
-                        <i class="bi bi-eye"></i> Details
-                    </a>
-                    <a href="@($"newsarticles/delete?newsarticleid={context.NewsArticleId}")" class="btn btn-sm btn-danger">
-                        <i class="bi bi-trash"></i> Delete
-                    </a>
-                </div>
-            </TemplateColumn>
-        </QuickGrid>
-        
-        <Pagination State="@pagination" />
-    </div>
-}
+        @if (newsArticles == null)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <QuickGrid Items="@newsArticlesQueryable" Pagination="@pagination" Class="table table-striped table-hover">
+                    <PropertyColumn Property="newsarticle => newsarticle.NewsTitle" Title="Title" />
+                    <PropertyColumn Property="newsarticle => newsarticle.Headline" Title="Headline" />
+                    <PropertyColumn Property="newsarticle => newsarticle.CreatedDate" Title="Created Date" Format="dd MMM yyyy" />
+                    
+                    <TemplateColumn Title="Tags">
+                        @{
+                            // Convert string ID to int for method call
+                            var tags = GetTagsForArticle(context.NewsArticleId);
+                            foreach (var tag in tags)
+                            {
+                                <span class="badge bg-info me-1">@tag</span>
+                            }
+                        }
+                    </TemplateColumn>
+                    
+                    <TemplateColumn Title="Category">
+                        @GetCategoryName(context.CategoryId)
+                    </TemplateColumn>
+                    
+                    <TemplateColumn Title="Status">
+                        @if (context.NewsStatus == true)
+                        {
+                            <span class="badge bg-success">Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Inactive</span>
+                        }
+                    </TemplateColumn>       
+                    
+                    <PropertyColumn Property="newsarticle => GetAuthorName(newsarticle.CreatedById)" Title="Author" />
+                    <PropertyColumn Property="newsarticle => newsarticle.ModifiedDate" Title="Last Updated" Format="dd MMM yyyy" />
+                    
+                    <TemplateColumn Title="Actions">
+                        <div class="btn-group" role="group">
+                            <a href="@($"newsarticles/edit?newsarticleid={context.NewsArticleId}")" class="btn btn-sm btn-primary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                            <a href="@($"newsarticles/details?newsarticleid={context.NewsArticleId}")" class="btn btn-sm btn-info">
+                                <i class="bi bi-eye"></i> Details
+                            </a>
+                            <a href="@($"newsarticles/delete?newsarticleid={context.NewsArticleId}")" class="btn btn-sm btn-danger">
+                                <i class="bi bi-trash"></i> Delete
+                            </a>
+                        </div>
+                    </TemplateColumn>
+                </QuickGrid>
+                
+                <Pagination State="@pagination" />
+            </div>
+        }
+    }
 </AuthCheck>
 
 
@@ -87,6 +107,8 @@ else
     private IQueryable<NewsArticle>? newsArticlesQueryable;
     private PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
     private string statusFilter = string.Empty;
+    private bool isLoading = true;
+    private bool isAdmin = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -101,6 +123,22 @@ else
             newsArticlesQueryable = newsArticlesQueryable.Where(a => 
                 a.NewsStatus != null && a.NewsStatus.ToString().Contains(statusFilter, StringComparison.OrdinalIgnoreCase));
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Check if user is admin - this needs to be done after render to use JS Interop
+            isAdmin = await AuthService.IsAdmin();
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void RedirectToHome()
+    {
+        NavigationManager.NavigateTo("/NewsArticlePage");
     }
     
     // Helper methods for displaying related information

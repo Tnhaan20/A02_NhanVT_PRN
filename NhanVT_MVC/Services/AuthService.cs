@@ -7,6 +7,7 @@ namespace NhanVT_MVC.Services
     public class AuthService
     {
         private readonly IJSRuntime _jsRuntime;
+        private const string ADMIN_EMAIL = "admin@FUNewsManagementSystem.org";
 
         public AuthService(IJSRuntime jsRuntime)
         {
@@ -45,40 +46,48 @@ namespace NhanVT_MVC.Services
         }
 
         public async Task<bool> IsAdmin()
-{
-    if (IsPrerendering()) return false;
-    
-    try
-    {
-        // First check direct isAdmin flag (used for admin from appsettings.json)
-        var isAdmin = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "isAdmin");
-        if (isAdmin == "true")
         {
-            Console.WriteLine("Admin check: direct admin flag found");
-            return true;
+            if (IsPrerendering()) return false;
+            
+            try
+            {
+                // Get current user email - this is the most important identifier
+                var email = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "email");
+                
+                // If no email, user isn't logged in at all
+                if (string.IsNullOrEmpty(email))
+                {
+                    Console.WriteLine("Admin check: No user logged in");
+                    return false;
+                }
+                
+                // Primary check: Is the current email the admin email?
+                if (email == ADMIN_EMAIL)
+                {
+                    Console.WriteLine("Admin check: Admin email confirmed");
+                    return true;
+                }
+                
+                // Not the admin email, definitely not an admin regardless of isAdmin flag
+                Console.WriteLine($"Admin check: User email {email} is not admin email");
+                
+                // Clear any incorrect isAdmin flag for non-admin emails
+                var isAdminFlag = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "isAdmin");
+                if (isAdminFlag == "true")
+                {
+                    // This is the bug - non-admin has admin flag set to true
+                    Console.WriteLine("Bug detected: Non-admin user has admin flag set to true. Clearing...");
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "isAdmin", "false");
+                }
+                
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in IsAdmin: {ex.Message}");
+                return false;
+            }
         }
-        
-        // For debugging, check what email is stored
-        var email = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "email");
-        Console.WriteLine($"Admin check for email: {email}");
-        
-        // Check if email matches admin email from appsettings.json (fallback approach)
-        // Note: This would need access to configuration, but we're showing the logic
-        if (email == "admin@FUNewsManagementSystem.org")
-        {
-            Console.WriteLine("Admin check: admin email matched");
-            return true;
-        }
-        
-        Console.WriteLine("Admin check: not an admin");
-        return false;
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error in IsAdmin: {ex.Message}");
-        return false;
-    }
-}
 
         public async Task<int?> GetUserRole()
         {
@@ -137,10 +146,17 @@ namespace NhanVT_MVC.Services
             
             try
             {
+                // Clear all user data from localStorage
                 await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "email");
                 await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "roleId");
                 await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "accountId");
+                
+                // For the isAdmin flag, first remove it then explicitly set to false
+                // This double approach ensures it's definitely cleared
                 await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "isAdmin");
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "isAdmin", "false");
+                
+                Console.WriteLine("Logout completed: All authentication data cleared");
             }
             catch (Exception ex)
             {

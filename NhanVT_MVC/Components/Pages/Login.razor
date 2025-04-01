@@ -70,14 +70,21 @@
             // Check admin login
             if (loginModel.Email == adminEmail && loginModel.Password == adminPassword)
             {
+                // Clear all previous auth data to prevent issues
+                await JSRuntime.InvokeVoidAsync("localStorage.clear");
+                
+                // Set admin data
                 authData.Add("email", loginModel.Email);
                 authData.Add("isAdmin", "true");
                 
                 // Set admin redirect URL
-                redirectUrl = "/systemaccounts"; // Or whatever admin landing page you want
+                redirectUrl = "/systemaccounts"; // Admin landing page
             }
             else
             {
+                // Before checking regular user login, ensure admin flag is cleared
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "isAdmin", "false");
+                
                 // Check regular user login
                 var account = AccountRepository.GetAccount(loginModel.Email, loginModel.Password);
                 if (account == null)
@@ -90,6 +97,9 @@
                 authData.Add("email", account.AccountEmail);
                 authData.Add("roleId", account.AccountRole.Value.ToString());
                 authData.Add("accountId", account.AccountId.ToString());
+                
+                // Explicitly set non-admin state
+                authData.Add("isAdmin", "false");
 
                 // Determine redirect URL based on role
                 redirectUrl = account.AccountRole.Value == 1 || account.AccountRole.Value == 2

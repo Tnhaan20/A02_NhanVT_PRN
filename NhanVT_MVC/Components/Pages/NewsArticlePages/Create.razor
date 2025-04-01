@@ -2,28 +2,37 @@
 @using A02_BOs
 @using A02_Repos
 @using Microsoft.AspNetCore.Components.Forms
+@using NhanVT_MVC.Services
 @inject INewsArticleRepository NewsArticleRepository
 @inject ICategoriesRepo CategoryRepository
 @inject ITagRepo TagRepository
 @inject IHttpContextAccessor HttpContextAccessor
 @inject NavigationManager NavigationManager
+@inject AuthService AuthService
 
 <PageTitle>Create News Article</PageTitle>
 
 <div class="container my-4">
-    @if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <div class="alert alert-danger" role="alert">
-            @errorMessage
-        </div>
-    }
-    
     @if (isLoading)
     {
         <div class="d-flex justify-content-center">
             <div class="spinner-border" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
+        </div>
+    }
+    else if (isLecturer)
+    {
+        <div class="alert alert-warning">
+            <h4>Access Denied</h4>
+            <p>Lecturers are not allowed to create news articles.</p>
+            <button class="btn btn-primary" @onclick="RedirectToUnauthorized">Go to News Page</button>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @errorMessage
         </div>
     }
     else
@@ -127,30 +136,28 @@
     private string? errorMessage;
     private bool isLoading = true;
     private bool isActive = true;
+    private bool isLecturer = false;
     private short? selectedCategoryId;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            // Authentication checks commented out for testing
-            /*
-            // Check if user is logged in
-            var httpContext = HttpContextAccessor.HttpContext;
-            if (httpContext == null || string.IsNullOrEmpty(httpContext.Session.GetString("Email")))
+            // Check if user is authenticated using AuthService
+            if (!await AuthService.IsAuthenticated())
             {
                 NavigationManager.NavigateTo("/login", forceLoad: true);
                 return;
             }
 
-            // Check if user has correct role (staff)
-            var role = httpContext.Session.GetInt32("RoleId");
-            if (role != 1) // assuming 1 is staff
+            // Check user role - if lecturer, restrict access
+            var userRole = await AuthService.GetUserRole();
+            if (userRole.HasValue && userRole.Value == 2)
             {
-                NavigationManager.NavigateTo("/unauthorized", forceLoad: true);
+                isLecturer = true;
+                isLoading = false;
                 return;
             }
-            */
 
             // Load categories and tags
             await LoadLookupData();
@@ -159,22 +166,59 @@
             newsArticle = new NewsArticle
             {
                 CreatedDate = DateTime.Now,
-                ModifiedDate = DateTime.Now,
-                // Default values for testing without authentication
-                CreatedById = 1, // Use a default ID for testing
-                UpdatedById = 1  // Use a default ID for testing
+                ModifiedDate = DateTime.Now
             };
+            
+            // Get current user ID from AuthService
+            var userId = await AuthService.GetUserId();
+            if (userId.HasValue)
+            {
+                newsArticle.CreatedById = (short)userId.Value;
+                newsArticle.UpdatedById = (short)userId.Value;
+            }
             
             // Set default status
             isActive = true;
-
-            isLoading = false;
         }
         catch (Exception ex)
         {
             errorMessage = "Error loading page: " + ex.Message;
+            Console.WriteLine($"Error in OnInitializedAsync: {ex.Message}");
+        }
+        finally
+        {
             isLoading = false;
         }
+    }
+
+    // Keep the OnAfterRenderAsync as a backup check
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Double-check user role using AuthService
+                var userRole = await AuthService.GetUserRole();
+                
+                // Role 3 is lecturer - restrict access
+                if (userRole.HasValue && userRole.Value == 2 && !isLecturer)
+                {
+                    isLecturer = true;
+                    Console.WriteLine("Lecturer detected in OnAfterRenderAsync. Access to create restricted.");
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking role in OnAfterRenderAsync: {ex.Message}");
+            }
+        }
+    }
+    
+    private void RedirectToUnauthorized()
+    {
+        NavigationManager.NavigateTo("/newsarticles", forceLoad: true);
     }
 
     private async Task LoadLookupData()
@@ -202,6 +246,14 @@
     {
         try
         {
+            // Check role again before saving to prevent circumvention
+            var userRole = await AuthService.GetUserRole();
+            if (userRole.HasValue && userRole.Value == 2)
+            {
+                NavigationManager.NavigateTo("/unauthorized", forceLoad: true);
+                return;
+            }
+            
             // Get all existing news articles to determine next ID
             var allNews = NewsArticleRepository.GetNewsArticles();
             int nextId = 1;
@@ -244,31 +296,25 @@
             // Set the status from checkbox
             newsArticle.NewsStatus = isActive;
 
-            // Authentication related code commented out for testing
-            /*
-            // Set the current user as creator if not already set
-            var httpContext = HttpContextAccessor.HttpContext;
-            if (httpContext != null)
+            // Get current user ID for created/updated by fields
+            var userId = await AuthService.GetUserId();
+            if (userId.HasValue)
             {
-                var accountId = httpContext.Session.GetInt32("AccountId");
-                if (accountId.HasValue)
+                if (!newsArticle.CreatedById.HasValue)
                 {
-                    if (!newsArticle.CreatedById.HasValue)
-                    {
-                        newsArticle.CreatedById = (short)accountId.Value;
-                    }
-                    
-                    newsArticle.UpdatedById = (short)accountId.Value;
+                    newsArticle.CreatedById = (short)userId.Value;
                 }
+                newsArticle.UpdatedById = (short)userId.Value;
             }
-            */
-
-            // Use default values for testing
-            if (!newsArticle.CreatedById.HasValue)
+            else
             {
-                newsArticle.CreatedById = 1; // Default value for testing
+                // If somehow we don't have a user ID, use a safe default
+                if (!newsArticle.CreatedById.HasValue)
+                {
+                    newsArticle.CreatedById = 1; // Default as fallback
+                }
+                newsArticle.UpdatedById = 1; // Default as fallback
             }
-            newsArticle.UpdatedById = 1; // Default value for testing
 
             // Add the news article
             newsArticle.Tags = new List<Tag>();
@@ -286,6 +332,7 @@
         catch (Exception ex)
         {
             errorMessage = "Error creating article: " + ex.Message;
+            Console.WriteLine($"Error in HandleValidSubmit: {ex.Message}");
         }
     }
 }
